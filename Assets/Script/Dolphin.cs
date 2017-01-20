@@ -115,6 +115,10 @@ public class Dolphin : MonoBehaviour
         {
             var wave = Instantiate(WavePrefab, transform.position, Quaternion.identity);
             wave.Mode = _currentWaveMode;
+            if (_currentWaveMode == WaveMode.Attack)
+            {
+                Dash();
+            }
             _currentWaveCooldown = WaveCooldown;
         }
     }
@@ -151,6 +155,7 @@ public class Dolphin : MonoBehaviour
         _isDashing = true;
         yield return new WaitForSeconds(DashTime);
         _isDashing = false;
+        _movementVector = _movementVector * -1;
     }
 }
 public enum WhaleMode { Alpha, Follower }
