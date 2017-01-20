@@ -17,6 +17,8 @@ public class Dolphin : MonoBehaviour
     public float MinChaseDuration = 2f;
     public float WaveCooldown = .5f;
     public float DashTime = 1f;
+    public GameObject TrailPrefab;
+
 
     private Rigidbody2D _rigidbody;
     private Vector2 _movementVector;
@@ -37,6 +39,8 @@ public class Dolphin : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (TrailPrefab != null && _isDashing)
+            SpawnTrail();
         switch (Mode)
         {
             case WhaleMode.Alpha:
@@ -47,6 +51,12 @@ public class Dolphin : MonoBehaviour
                 break;
         }
         RotationUpdate();
+    }
+
+    private void SpawnTrail()
+    {
+        var trail = Instantiate(TrailPrefab, transform.position, transform.rotation);
+        trail.transform.localScale = transform.localScale;
     }
 
     void FixedUpdate()
