@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Security.AccessControl;
 using UnityEditor;
@@ -13,14 +14,18 @@ public class Dolphin : MonoBehaviour
     public Wave WavePrefab;
     public float MaxChaseDuration = 3f;
     public float MinChaseDuration = 2f;
+    public float WaveCooldown = .5f;
 
     private Rigidbody2D _rigidbody;
     private Vector2 _movementVector;
     private float _chaseDuration;
+    private bool _buttonDown;
+    private float _currentWaveCooldown = 0;
     // Use this for initialization
     void Awake()
     {
         _rigidbody = GetComponent<Rigidbody2D>();
+        _buttonDown = false;
     }
 
     // Update is called once per frame
@@ -35,12 +40,21 @@ public class Dolphin : MonoBehaviour
                 FollowerUpdate();
                 break;
         }
-        _rigidbody.AddForceAtPosition(_movementVector * Speed, transform.position);
         RotationUpdate();
+    }
+
+    void FixedUpdate()
+    {
+        _rigidbody.AddForceAtPosition(_movementVector * Speed, transform.position);
     }
 
     private void RotationUpdate()
     {
+        if (_movementVector.x < 0)
+            transform.localScale = new Vector3(1, -1, 1);
+        else
+            transform.localScale = new Vector3(1, 1, 1);
+
         var angle = Mathf.Atan2(_movementVector.y, _movementVector.x) * Mathf.Rad2Deg;
         transform.localRotation = Quaternion.AngleAxis(angle, Vector3.forward);
     }
@@ -67,23 +81,38 @@ public class Dolphin : MonoBehaviour
     private void ControlActions()
     {
         if (WavePrefab == null) return;
-        if (Input.GetButtonDown("Action"))
+
+        if (_currentWaveCooldown >= 0)
+        {
+            _currentWaveCooldown -= Time.deltaTime;
+        }
+        else
+        {
+            _currentWaveCooldown = 0;
+        }
+        if (!_buttonDown && Input.GetButtonDown("Action"))
+            _buttonDown = true;
+        if (_buttonDown && Input.GetButtonUp("Action"))
+        {
+            _buttonDown = false;
+            _currentWaveCooldown = 0;
+        }
+        if (_buttonDown && Math.Abs(_currentWaveCooldown) < float.Epsilon)
+        {
             Instantiate(WavePrefab, transform.position, Quaternion.identity);
+            _currentWaveCooldown = WaveCooldown;
+        }
     }
 
     private void ControlMovement()
     {
-        _movementVector = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical") / 2).normalized;
-        if (_movementVector.y >= .5f)
-            _movementVector.y = .5f;
+        _movementVector = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")).normalized;
     }
 
     public void SetMovementVector(Vector2 source)
     {
         if (Mode != WhaleMode.Follower) return;
         _movementVector = (source - (Vector2)transform.position).normalized;
-        if (_movementVector.y >= .5f)
-            _movementVector.y = .5f;
         _chaseDuration = Random.Range(MinChaseDuration, MaxChaseDuration);
     }
 }
