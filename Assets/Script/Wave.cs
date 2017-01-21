@@ -9,7 +9,7 @@ public class Wave : MonoBehaviour
     public float FadeSpeed = 10f;
     public float Duration = 1f;
     public WaveMode Mode;
-
+    public Vector2 OriginalWave;
     private PaletteSwapper _paletteSwapper;
 
     private SpriteRenderer _spriteRenderer;
@@ -23,8 +23,23 @@ public class Wave : MonoBehaviour
     {
         var dolphinScript = collision.GetComponent<Dolphin>();
         if (dolphinScript == null) return;
-        dolphinScript.SetMovementVector((Vector2)transform.position);
-        if (Mode == WaveMode.Attack)
+        if (dolphinScript.Mode == DolphinMode.Follower && gameObject.tag != "SmallWave" && gameObject != collision.gameObject)
+        {
+            var wave = dolphinScript.SendWave();
+            wave.OriginalWave = transform.position;
+        }
+        WaveAction(dolphinScript,this);
+    }
+
+    private void WaveAction(Dolphin dolphinScript,Wave waveScript)
+    {
+        if (waveScript.OriginalWave == Vector2.zero)
+            dolphinScript.SetMovementVector(waveScript.transform.position);
+        else
+        {
+            dolphinScript.SetMovementVector(waveScript.OriginalWave);
+        }
+        if (waveScript.Mode == WaveMode.Attack)
             dolphinScript.Dash();
     }
 

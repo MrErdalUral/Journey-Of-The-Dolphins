@@ -16,6 +16,6 @@ public class TrailController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        _spriteRenderer.color = new Color(_spriteRenderer.color.r, _spriteRenderer.color.g, _spriteRenderer.color.b, Mathf.Lerp(_spriteRenderer.color.a, 0, Time.deltaTime * 5f));
+        _spriteRenderer.color = new Color(_spriteRenderer.color.r, _spriteRenderer.color.g, _spriteRenderer.color.b, Mathf.Lerp(_spriteRenderer.color.a, 0, Time.deltaTime * 15f));
     }
 }

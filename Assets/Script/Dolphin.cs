@@ -9,7 +9,7 @@ using Random = UnityEngine.Random;
 public class Dolphin : MonoBehaviour
 {
     [SerializeField]
-    public WhaleMode Mode = WhaleMode.Alpha;
+    public DolphinMode Mode = DolphinMode.Alpha;
     public float Speed = 400f;
     public float DashSpeed = 700f;
     public Wave WavePrefab;
@@ -18,6 +18,7 @@ public class Dolphin : MonoBehaviour
     public float WaveCooldown = .5f;
     public float DashTime = 1f;
     public GameObject TrailPrefab;
+    public float Health = 100f;
 
 
     private Rigidbody2D _rigidbody;
@@ -28,7 +29,16 @@ public class Dolphin : MonoBehaviour
     private float _currentDashCooldown;
     private WaveMode _currentWaveMode = WaveMode.Follow;
     [SerializeField]
-    private bool _isDashing;
+    private bool _isJumping;
+    private float _timeCounter;
+    public bool IsDashing;
+
+    public Vector2 MovementVector
+    {
+        get { return _movementVector; }
+        set { _movementVector = value; }
+    }
+
     // Use this for initialization
     void Awake()
     {
@@ -39,18 +49,58 @@ public class Dolphin : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (TrailPrefab != null && _isDashing)
+        _timeCounter += Time.deltaTime;
+        if (TrailPrefab != null && IsDashing && _timeCounter >= .1f)
+        {
             SpawnTrail();
+            _timeCounter = 0;
+        }
         switch (Mode)
         {
-            case WhaleMode.Alpha:
+            case DolphinMode.Alpha:
                 AlphaUpdate();
                 break;
-            case WhaleMode.Follower:
+            case DolphinMode.Follower:
                 FollowerUpdate();
                 break;
         }
         RotationUpdate();
+
+
+        if (_isJumping)
+        {
+            _rigidbody.AddForce(Vector2.down * 800, ForceMode2D.Force);
+        }
+        if (IsDashing)
+            _rigidbody.AddForce(MovementVector * DashSpeed, ForceMode2D.Force);
+        else
+            _rigidbody.AddForce(MovementVector * Speed, ForceMode2D.Force);
+
+        ControlHealth();
+    }
+
+    private void ControlHealth()
+    {
+        if (Health <= 0)
+        {
+            if (Mode == DolphinMode.Alpha)
+            {
+                var newDolphin = GameObject.FindGameObjectWithTag("FollowerDolphin");
+                newDolphin.tag = "Dolphin";
+                newDolphin.GetComponent<Dolphin>().Mode = DolphinMode.Alpha;
+                var camera = Camera.main;
+                camera.GetComponent<CameraController>().ChaseTarget = newDolphin.transform;
+            }
+            Destroy(gameObject);
+        }
+        else
+        {
+            Health += 3 * Time.deltaTime;
+            if (Health >= 100)
+            {
+                Health = 100;
+            }
+        }
     }
 
     private void SpawnTrail()
@@ -59,19 +109,13 @@ public class Dolphin : MonoBehaviour
         trail.transform.localScale = transform.localScale;
     }
 
-    void FixedUpdate()
-    {
-        if (_isDashing)
-            _rigidbody.AddForceAtPosition(_movementVector * DashSpeed, transform.position);
-        else
-            _rigidbody.AddForceAtPosition(_movementVector * Speed, transform.position);
-    }
 
     private void RotationUpdate()
     {
-        transform.localScale = _movementVector.x < 0 ? new Vector3(1, -1, 1) : new Vector3(1, 1, 1);
+        var lookingVector = _isJumping ? _rigidbody.velocity.normalized : MovementVector;
+        transform.localScale = lookingVector.x < 0 ? new Vector3(1, -1, 1) : new Vector3(1, 1, 1);
 
-        var angle = Mathf.Atan2(_movementVector.y, _movementVector.x) * Mathf.Rad2Deg;
+        var angle = Mathf.Atan2(lookingVector.y, lookingVector.x) * Mathf.Rad2Deg;
         transform.localRotation = Quaternion.AngleAxis(angle, Vector3.forward);
     }
 
@@ -79,7 +123,7 @@ public class Dolphin : MonoBehaviour
     {
         if (_chaseDuration <= 0)
         {
-            _movementVector = Vector2.zero;
+            MovementVector = Vector2.zero;
             _chaseDuration = 0;
         }
         else
@@ -123,14 +167,21 @@ public class Dolphin : MonoBehaviour
         }
         if (_buttonDown && Math.Abs(_currentWaveCooldown) < float.Epsilon)
         {
-            var wave = Instantiate(WavePrefab, transform.position, Quaternion.identity);
-            wave.Mode = _currentWaveMode;
-            if (_currentWaveMode == WaveMode.Attack)
-            {
-                Dash();
-            }
-            _currentWaveCooldown = WaveCooldown;
+            SendWave();
         }
+    }
+
+    public Wave SendWave()
+    {
+        if (WavePrefab == null) return null;
+        var wave = Instantiate(WavePrefab, transform.position, Quaternion.identity);
+        wave.Mode = _currentWaveMode;
+        if (_currentWaveMode == WaveMode.Attack)
+        {
+            Dash();
+        }
+        _currentWaveCooldown = WaveCooldown;
+        return wave;
     }
 
     private IEnumerator SetAttackMode()
@@ -142,14 +193,14 @@ public class Dolphin : MonoBehaviour
 
     private void ControlMovement()
     {
-        if (!_isDashing)
-            _movementVector = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")).normalized;
+        if (!IsDashing)
+            MovementVector = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")).normalized;
     }
 
     public void SetMovementVector(Vector2 source)
     {
-        if (Mode != WhaleMode.Follower || _isDashing) return;
-        _movementVector = (source - (Vector2)transform.position).normalized;
+        if (Mode != DolphinMode.Follower || IsDashing) return;
+        MovementVector = (source - (Vector2)transform.position).normalized;
         _chaseDuration = Random.Range(MinChaseDuration, MaxChaseDuration);
     }
 
@@ -162,10 +213,20 @@ public class Dolphin : MonoBehaviour
 
     private IEnumerator SetDashState()
     {
-        _isDashing = true;
+        IsDashing = true;
         yield return new WaitForSeconds(DashTime);
-        _isDashing = false;
-        _movementVector = _movementVector * -1;
+        IsDashing = false;
+        MovementVector = MovementVector * -1;
+    }
+
+    public void JumpEnter()
+    {
+        _isJumping = true;
+    }
+
+    public void JumpExit()
+    {
+        _isJumping = false;
     }
 }
-public enum WhaleMode { Alpha, Follower }
+public enum DolphinMode { Alpha, Follower }

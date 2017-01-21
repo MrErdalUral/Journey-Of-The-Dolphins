@@ -10,7 +10,6 @@ public class PaletteSwapper : MonoBehaviour
     public SpriteRenderer SpriteRenderer;
     public ColorPalette[] Palettes;
 
-    [Range(0, 50)]
     public int CurrentPaletteIndex = 0;
 
     private Texture2D _texture;
