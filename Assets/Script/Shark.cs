@@ -9,7 +9,7 @@ public class Shark : MonoBehaviour
     public float DashSpeed = 10f;
     public float Health = 100f;
     public float Damage = 25f;
-    private Rigidbody2D _rigidbody;
+
     [SerializeField]
     private Vector3 _pos1;
     [SerializeField]
@@ -23,7 +23,6 @@ public class Shark : MonoBehaviour
     {
         _currentSpeed = Speed;
         _mask = LayerMask.GetMask("Dolphin", "FollowerDolphin");
-        _rigidbody = GetComponent<Rigidbody2D>();
         _currentDest = new Vector3(Random.Range(_pos1.x, _pos2.x), Random.Range(_pos1.y, _pos2.y), 0);
     }
 

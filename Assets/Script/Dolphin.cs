@@ -86,10 +86,14 @@ public class Dolphin : MonoBehaviour
             if (Mode == DolphinMode.Alpha)
             {
                 var newDolphin = GameObject.FindGameObjectWithTag("FollowerDolphin");
-                newDolphin.tag = "Dolphin";
-                newDolphin.GetComponent<Dolphin>().Mode = DolphinMode.Alpha;
-                var camera = Camera.main;
-                camera.GetComponent<CameraController>().ChaseTarget = newDolphin.transform;
+                if (newDolphin != null)
+                {
+                    var instance = Instantiate(this, newDolphin.transform.position, Quaternion.identity);
+                    instance.Health = newDolphin.GetComponent<Dolphin>().Health;
+                    Destroy(newDolphin);
+                    var camera = Camera.main;
+                    camera.GetComponent<CameraController>().ChaseTarget = instance.transform;
+                }
             }
             Destroy(gameObject);
         }
@@ -193,8 +197,7 @@ public class Dolphin : MonoBehaviour
 
     private void ControlMovement()
     {
-        if (!IsDashing)
-            MovementVector = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")).normalized;
+        MovementVector = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")).normalized;
     }
 
     public void SetMovementVector(Vector2 source)
